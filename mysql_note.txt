@@ -1,0 +1,256 @@
+mysql -u root -p   登入mysql
+
+show database;  看資料庫
+
+create database ron;  新增資料庫
+
+select database();  現在使用中的資料庫
+
+show variables\G;  查看資料庫
+
+status;  看狀態
+
+show tables;  看全部表
+
+create table cust (cname varchar(10) ,tel varchar(10) ); 建表
+
+desc cust;  看表內容
+
+number
+1. INT => 2^32 => -21e ~ +21e
+2. TINYINT => 2^8 => -128 ~ +127
+3. SMALLINT => 2^16
+4. MEDIUMINT => 2^24
+5. BIGINT
+
+float
+1. float => +- 10^38
+2. DOUBLE => +- 10^308
+
+String
+1. CHAR => 固定 => ~255
+2. varchar => 變動 => ~255
+3. text => 65535
+4. LONGTEXT => 42億
+
+DateTime
+1. DateTime => YYYY-MM-DD hh:mm:ss 1000-01-01 9999-12-31
+2. Date
+3. YEAR => 4: 1901 ~ 2155 2: 1970 ~ 2069
+4. TIME
+                  ┌  add
+alter table 表名 -|-- modify  
+                  └  change
+
+
+default:
+create table test8 ( id int primary key auto_increment,
+    -> cname varchar(10) default 'noname', age int default -1);
+
+insert into test8 values();
+
+新增欄位並設default
+
+ alter table test8 add addr varchar(100);
+ alter table test8 modify addr varchar(100) default 'no addr';
+
+
+ 建index
+ create index myidx on test8(age);
+
+ 複製 students 到tb1
+ create table tb1 select * from students;
+
+只複製結構
+ create table tb2 like students;
+複製內容
+ insert into tb2 select * from students;
+
+顯示部分內容
+ select * from students limit 0,3;
+
+隨機排序
+ select * from students order by rand();
+
+現在時間
+ select now();
+
+時間差
+select datediff('2020-01-01',now());
+
+17天后星期幾
+select dayname(adddate(now(), 17));
+
+搜尋條件 between
+select * from students where cbirthday between '1987-04-04' and '1988-12-31';
+
+找到姓林的
+select * from students where cname like '林%';
+
+字串組合
+ select concat(firstname, ' ', lastname) from employees;
+
+ 按照條件排序
+  select concat(firstname, ' ', lastname), HireDate from employees
+    -> order by HireDate;
+desc 反序
+
+兩次以上的排序用,
+select Title, FirstName, LastNAme from employees order by Title, LastName desc;
+
+不等於
+<>
+
+找null可以用is
+
+可以直接用>找字
+select firstname, lastname from employees where lastname >= 'N';
+
+where a<b
+select productname, UnitsInStock, UnitsOnOrder, ReorderLevel from products where UnitsInStock <= ReorderLevel;
+
+組合
+select concat(firstname, ' ', lastname) as fullname from employees;
+
+計算 組合
+select orderid, freight, freight*1.1 as freightTotal from orders where freight > 500;
+
+名稱有空白
+select * from `order details` limit 10;
+
+加總
+select sum(Quantity) from `order details` where productid=3;
+
+Case
+select case when csex='F' then '小姐' when csex='M' then '先生' end as title 
+from students;
+
+case的其他應用
+select concat(cname, ' ',  case when csex='F' then '小姐' when csex='M' then '先生' end)
+as title from students
+
+只有兩個也可以這樣用
+select concat(cname, ' ', if(csex='F', '小姐','先生')) as title from students;
+
+多個用case 可用else
+select cname, grade, 
+case when grade>90 then 'A' when grade>80 then 'B' when grade>70 then 'C' else 'pig' end
+ as level from students;
+
+分組
+select csex, count(*), sum(grade), avg(grade), min(grade), max(grade) 
+from students group by csex;
+
+group having
+ select city, count(employeeid) as numsEmployee from employees 
+ group by city having numsEmployee >=2;
+
+多條件
+ select city, count(employeeid) as numsEmployee from employees 
+ where title='Sales Representative' group by city having numsEmployee >= 2 
+ order by numsEmployee;
+
+差異
+ select count(distinct city) from employees;
+
+總銷售量小於200
+ select productid, sum(quantity) as totalUnits from `order details` 
+ group by productid having totalUnits < 200;
+
+平均售價高於70
+ select productid, avg(unitprice) as avgPrice from `order details` 
+ group by productid having avgPrice > 70;
+
+group 練習
+ select customerid, count(orderid) as numsOrders from orders
+    -> group by customerid
+    -> having numsOrders >15
+    -> order by numsOrders desc;
+
+四捨五入
+select freight, concat('$', round(freight, -1)) from orders;
+
+datediff 計算
+select lastname, birthdate, hiredate, floor(datediff(hiredate, birthdate)/365) 
+hireage from employees;
+
+extra 
+ select extract(month from birthdate) as month from employees order by month;
+
+表中表
+ select companyname from customers 
+ where customerid= ( select customerid from orders where orderid=10290);
+
+以ID區隔找時間內
+  select customerid, orderdate from orders 
+  group by customerid having orderdate between '1997-01-01' and '1997-12-31';
+
+子查詢
+  select productname from products 
+  where categoryid=(select categoryid from categories where categoryname='seafood');
+
+子查詢的子查詢
+  select companyname from suppliers where supplierid in (select supplierid from products 
+  where categoryid=(select categoryid from categories where categoryname='seafood'));
+
+join
+  select employees.employeeid, employees.firstname, employees.lastname, orders.orderid, orders.orderdate 
+  from employees join orders on (employees.employeeid = orders.employeeid) 
+  order by orders.orderdate limit 10;
+
+別名
+select e.employeeid, e.firstname, e.lastname, o.orderid, o.orderdate 
+from employees e join orders o on (e.employeeid = o.employeeid) 
+order by o.orderdate limit 10;
+
+較大關聯
+select o.orderid, c.companyname, e.firstname, e.lastname from orders o 
+join employees e on (e.employeeid = o.employeeid) 
+join customers c on (c.customerid = o.customerid) 
+where o.shippeddate > o.requireddate and o.orderdate >= '1998-01-01' 
+order by c.companyname;
+
+1997以後 單量超過15章的公司
+select c.companyname, count(o.orderid) as ordernumber 
+from customers c join orders o on (c.customerid = o.customerid) 
+where o.orderdate>='1997-01-01' group by c.companyname having count(o.orderid) >=15 
+order by count(o.orderid);
+
+大於10000的單
+select e.lastname, c.companyname, o.orderid, od.unitprice*od.quantity*(1-discount) as totalprice from `order details` od join orders o on (o.orderid = od.orderid) join customers c on (c.customerid=o.customerid) join employees e on (e.employeeid = o.employeeid) where od.unitprice*od.quantity*(1-discount) > 10000 order by totalprice desc;
+
+
+銷售最好的員工
+select o.employeeid, e.lastname, sum(od.unitprice*od.quantity*(1-od.discount) - o.freight) as ordersalse from 
+`order details` od 
+join orders o on(o.orderid = od.orderid)
+join employees e on (e.employeeid = o.employeeid)
+group by employeeid order by ordersalse desc
+limit 5;
+
++------------+-----------+--------------------+
+| employeeid | lastname  | ordersalse         |
++------------+-----------+--------------------+
+|          4 | Peacock   | 195629.29573612887 |
+|          3 | Leverling |  167029.2228513775 |
+|          1 | Davolio   | 163989.35437067712 |
+|          2 | Fuller    | 140613.22483498263 |
+|          8 | Callahan  | 103557.85740648406 |
++------------+-----------+--------------------+
+
+賣得最好的城市
+select o.shipcity, sum(od.unitprice*od.quantity*(1-od.discount) - o.freight) as citysalse from 
+`order details` od 
+join orders o on(o.orderid = od.orderid)
+group by o.shipcity order by citysalse desc
+limit 5;
+
++----------------+--------------------+
+| shipcity       | citysalse          |
++----------------+--------------------+
+| Cunewalde      |  89416.17488350898 |
+| Graz           |   80338.0583535011 |
+| Boise          |  77828.09986812407 |
+| Rio de Janeiro | 47646.639963607624 |
+| Albuquerque    | 44322.610487737846 |
++----------------+--------------------+
