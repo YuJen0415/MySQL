@@ -254,3 +254,165 @@ limit 5;
 | Rio de Janeiro | 47646.639963607624 |
 | Albuquerque    | 44322.610487737846 |
 +----------------+--------------------+
+
+from可以多個
+select e.employeeid, e.firstname, e.lastname, o.orderid, o.orderdate from employees e, orders o 
+where e.employeeid = o.employeeid order by employeeid limit 10;
+
+in 可以加條件式
+select sum(unitprice*quantity) from `order details` 
+where orderid in (select orderid from orders where employeeid=4);
+
+另一種寫法
+select e.employeeid, o.orderid, sum(unitprice*quantity) as total 
+from orders o join `order details` od on (o.orderid=od.orderid) 
+join employees e on (o.employeeid = e.employeeid) 
+group by o.employeeid order by total desc;
+
+補上主key
+alter table tb3 add primary key(id);
+
+拿掉主key
+alter table tb3 drop primary key;
+
+建虛擬表
+create view female as select * from students where csex='F';
+
+虛擬表異動 原本的表也會被異動  反之亦然
+
+join可以用using
+select std.cname, std.cid, sc.term, sc.ch, sc.eng, sc.math 
+from students std join scores sc using(cid);
+
+也可以拿來建成虛擬表
+create view myscore as select std.cname, std.cid, sc.term, (sc.ch + sc.eng + sc.math)/3 as termScore 
+from students std join scores sc using(cid);
+
+drop view 刪掉
+
+view可以直接update改值  算式也會影響
+
+修改view
+create or replace view myscore as 
+select std.cname, std.cid, std.cemail, sc.term, sc.ch, sc.eng, sc.math, (sc.ch + sc.eng + sc.math)/3 as termScore 
+from students std join scores sc using(cid);
+
+另一種用法
+create or replace view myscore (id, name, email, term, ch, eng, math, avg) 
+as select std.cname, std.cid, std.cemail, sc.term, sc.ch, sc.eng, sc.math, (sc.ch + sc.eng + sc.math)/3 
+from students std join scores sc using(cid);
+
+改變結尾符號
+delimiter $
+
+定義變數
+set @var1 = 100; select @var1;
+
+變數的應用
+set @myid=1;
+select * from students where cid=@myid;
+
+查詢時給值
+select @max := max(grade), @min := min(grade), @avg := avg(grade) from students;
+
+prepare set execute 的使用
+prepare inputScore from 'insert into scores values (?,?,?,?,?)';
+
+set @id = 8, @term = '1', @ch = 13, @eng=100, @math = 89;
+
+execute inputScore using @id, @term, @ch, @eng, @math;
+
+先改變結尾符號
+delimiter //
+
+設定一個函式
+create procedure showdown() begin select * from myscore where avg < 70;
+    -> select * from myscore where avg > 70; end //
+
+還原結尾符號
+delimiter ;
+
+call函式
+call showdown();
+
+function 用法
+create function f1()
+select f1()
+
+參數應用
+create procedure p1(IN x int, OUT y int, INOUT z int)
+    -> begin select x,y,z;
+    -> set x = 100, y = 200, z= 300;
+    -> end
+
+set @v2 = 2, @v3 = 3;
+
+v2 v3有變化
+select @v2, @v3; 
+
+重點: into
+create procedure p2(IN s int, OUT pass int, OUT down int)
+    -> begin select count(*) into pass from students where score >= s;
+    -> select count(*) into down from students where score < s;
+    -> end ##
+
+做幾張單 多少業績
+create procedure p3 (in id int, out counter int, out sum int)
+    -> begin
+    -> select count(*) into counter from orders where employeeid = id;
+    -> select sum(unitprice*quantity) into sum from `order details` where orderid in (select orderid from orders where employeeid = id);
+    -> end
+
+call p3 (1, @c, @s);
+select @c, @s;
+
+procedure的insert into應用
+create procedure p4 (IN id int, in t varchar(2), in c int, in e int, in m int, out sum int) begin insert into scores values(id, t,c,e,m);
+    -> set sum = c+e+m;
+    -> end ##
+
+變數的宣告
+ create function f44() returns int begin declare v1 int;
+    -> declare v2, v3 int;
+    -> declare v4, v5 int default 1;
+    -> set v1 = 100, v2=200;
+    -> set v3 = v1 + v2 +v4 + v5;
+    -> return v3;
+    -> end
+
+宣告參數須放在一起
+create function pcount() returns int begin
+    -> declare ec, sc, cc, total int default 0;
+    -> select count(*) into ec from employees;
+    -> select count(*) into sc from suppliers;
+    -> select count(*) into cc from customers;
+    -> set total = ec+sc+cc;
+    -> return total;
+    -> end ##
+
+V2只存在第二個begin裡面
+create function brad01() returns int begin declare v1 int default 100;
+    -> begin declare v2 int;
+    -> set v2 = 200;
+    -> end;
+    -> set v1 = v2;
+    -> returns v1;
+    -> end;
+
+if else
+create procedure brad03(in score int)
+    -> begin if score >= 60 then select 'PASS';
+    -> else select 'down';
+    -> end if;
+    -> end; ##
+
+elseif
+create procedure brad04(in score int)
+    -> begin
+    -> if score >= 90 then select 'A';
+    -> elseif score >=80 then select 'B';
+    -> elseif score >=70 then select 'C';
+    -> elseif score >=60 then select 'D';
+    -> else select 'E';
+    -> end if;
+    -> end; ##
