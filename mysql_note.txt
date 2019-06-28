@@ -416,3 +416,181 @@ create procedure brad04(in score int)
     -> else select 'E';
     -> end if;
     -> end; ##
+
+
+case when的用法
+
+BEGIN
+DECLARE result varchar(10) DEFAULT '';
+
+case
+	WHEN x in (1, 3, 5, 7, 8, 10, 12) THEN SET result = '31day';
+    WHEN x in (4, 6, 9, 11) THEN SET result = '30Day';
+    WHEN x = 2 THEN SET result = '28Day';
+    ELSE set result = 'Not Much';
+END CASE;
+
+RETURN result;
+END
+
+
+repeat的用法
+
+BEGIN
+DECLARE i, sum INT DEFAULT 0;
+	REPEAT
+    set i = i + 1;
+    set sum = sum + i;
+    	UNTIL i >=x
+    END REPEAT;
+    return sum;
+END
+
+LOOP的用法
+BEGIN
+	DECLARE i int default 0;
+	brad:LOOP
+        IF i < 7 THEN
+        	SELECT 'helloworld';
+        ELSEIF i > 10 THEN
+        	LEAVE brad;
+        ELSE 
+        	SELECT 'restart';
+            set i = 100;
+            ITERATE brad;
+        end if;
+        set i = i +1;
+    end loop brad;
+    SELECT i;
+end
+
+FETCH CURSOR的用法
+
+BEGIN
+	DECLARE i INT;
+    DECLARE vexit int DEFAULT 0;
+    
+    DECLARE id INT DEFAULT 0;
+    DECLARE name varchar(10) DEFAULT '';
+    
+    DECLARE curs CURSOR FOR
+    	SELECT cid, cname FROM students;
+    DECLARE CONTINUE HANDLER FOR NOT FOUND SET vexit = 1;
+    OPEN curs;
+    
+    brad:LOOP
+    	FETCH curs into id, name;
+        if vexit = 1 THEN
+        	LEAVE brad;
+        end if;
+        SELECT concat(id, ":", name);
+        
+    end LOOP brad;
+    CLOSE curs;
+END
+
+兩個cursor 進階用法
+BEGIN
+	DECLARE i INT;
+    DECLARE vexit int DEFAULT 0;
+    
+    DECLARE id INT DEFAULT 0;
+    DECLARE iscore int DEFAULT 0;
+    DECLARE bch, ben, bmath INT DEFAULT 0;
+    DECLARE newstatus varchar(10) DEFAULT '';
+    
+    DECLARE curs1 CURSOR FOR
+    	SELECT cid, score FROM students;
+    DECLARE curs2 CURSOR FOR
+    	SELECT ch,eng, math FROM scores;
+    DECLARE CONTINUE HANDLER FOR NOT FOUND SET vexit = vexit + 1;
+    OPEN curs1;
+    OPEN curs2;
+    
+    brad: LOOP
+    	FETCH curs1 into id, iscore;
+        FETCH curs2 into bch, ben, bmath;
+        if vexit = 2 THEN
+        	LEAVE brad;
+        end if;
+        
+        SELECT concat(id, ' ',iscore,' ',bch,' ',ben,' ',bmath);
+        
+        if iscore >= 60 THEN
+        	set newstatus = '及格';
+        ELSE
+        	set newstatus = '不及格';
+        end if;
+        UPDATE students set pass = newstatus WHERE cid=id;
+    end LOOP brad;
+    CLOSE curs1;
+    CLOSE curs2;
+END
+
+
+觸發器 (拿來寫log)
+
+觸發的表
+時間 : after
+事件 : update
+
+BEGIN
+	if OLD.score <=  NEW.score THEN
+	insert INTO log (etime, mesg) 
+    VALUES (now(), concat('update',":", OLD.score, "=>", NEW.score));
+	end IF;
+end
+
+在觸發器裡加上會被觸發的條件 會出現錯誤
+
+
+lock tables
+unlock tables
+
+set autocommit = 0;
+start transcation;
+rollback;
+
+正則
+select * from students where caddr regexp '建國';
+
+^ 開頭 $ 結尾 .一個任意字元
+ regexp '^....$'
+
+set autocommit = 0;  (0 可rollback 1: 跟平常一樣)
+ select * from scores;
++------+------+------+------+------+
+| cid  | term | ch   | eng  | math |
++------+------+------+------+------+
+|   01 | 1    |    1 |    2 |    3 |
+|   01 | 1    |    1 |    2 |    3 |
++------+------+------+------+------+
+
+delete from scores;
+Empty set
+rollback;
+
+select * from scores;
++------+------+------+------+------+
+| cid  | term | ch   | eng  | math |
++------+------+------+------+------+
+|   01 | 1    |    1 |    2 |    3 |
+|   01 | 1    |    1 |    2 |    3 |
++------+------+------+------+------+
+
+匯出資料 插入,
+select * into outfile 'C:/ron/class2.txt' fields terminated by ',' from students;
+
+匯入資料
+load data local infile 'c:/ron/class.txt' into table news;
+
+全文搜索
+create fulltext index fsearch on productlines (textdescription);
+
+select productline from productlines where match(textdescription) against('automobiles, trains');
++--------------+
+| productline  |
++--------------+
+| Trains       |
+| Vintage Cars |
++--------------+

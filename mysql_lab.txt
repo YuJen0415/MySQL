@@ -1,0 +1,140 @@
+0. 每個辦公室的業績狀況表 
+
+select of.officecode, sum(quantityordered * priceeach) as perform
+from offices of join employees e on (of.officecode = e.officecode) 
+join customers c on (c.salesRepEmployeeNumber=e.employeenumber) 
+join orders o on (o.customernumber=c.customernumber) 
+join orderdetails od on (od.ordernumber=o.ordernumber)
+where o.status='Shipped'
+group by officecode  
+order by perform desc;
+
++------------+------------+
+| officecode | perform    |
++------------+------------+
+| 4          | 2812295.95 |
+| 1          | 1329614.32 |
+| 7          | 1324325.90 |
+| 3          | 1072619.47 |
+| 6          | 1033246.60 |
+| 2          |  835882.33 |
+| 5          |  457110.07 |
++------------+------------+
+
+1. 業務業績排行榜, procedure
+
+DELIMITER $$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `salseperform`()
+    NO SQL
+BEGIN
+	SELECT e.employeenumber, sum(quantityordered * priceeach)
+    as perform from employees e
+    join customers c on (c.salesRepEmployeeNumber=e.employeenumber)
+    join orders o on (o.customernumber=c.customernumber) 
+	join orderdetails od on (od.ordernumber=o.ordernumber)
+	where o.status='Shipped'
+    GROUP BY e.employeenumber
+    ORDER by perform desc;
+END$$
+DELIMITER ;
+
+employeenumber	perform
+1370	1065035.29
+1165	1021661.89
+1401	790297.44
+1501	686653.25
+1504	637672.65
+1323	584406.80
+1337	569485.75
+1612	523860.78
+1611	509385.82
+1286	488212.67
+1621	457110.07
+1216	449219.13
+1702	387477.47
+1188	386663.20
+1166	307952.43
+
+
+2. 熱銷商品排行榜, procedure
+
+DELIMITER $$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `hotorder`()
+    NO SQL
+BEGIN
+	SELECT p.productname, count(*), 
+    sum(quantityordered) as allorders, 
+    sum(quantityordered * priceeach) as allsales
+    FROM products p 
+    JOIN orderdetails od on (od.productCode=p.productCode)
+    JOIN orders o on (o.orderNumber=od.orderNumber)
+    WHERE o.status='Shipped'
+    GROUP BY p.productCode
+    ORDER BY allsales desc;
+END$$
+DELIMITER ;
+
+商品名稱                                訂單數       訂單內的量    總銷售額
++--------------------------------------+----------+-----------+-----------+
+| productname                          | count(*) | allorders | allsales  |
++--------------------------------------+----------+-----------+-----------+
+| 1992 Ferrari 360 Spider red          |       50 |      1720 | 264132.78 |
+| 2001 Ferrari Enzo                    |       26 |       973 | 182439.52 |
+| 1952 Alpine Renault 1300             |       27 |       911 | 179945.96 |
+| 2003 Harley-Davidson Eagle Drag Bike |       27 |       929 | 161576.48 |
+| 1968 Ford Mustang                    |       26 |       909 | 157749.08 |
+| 1969 Ford Falcon                     |       26 |       921 | 145082.38 |
+| 1998 Chrysler Plymouth Prowler       |       27 |       958 | 138404.55 |
+| 2002 Suzuki XREO                     |       27 |      1007 | 132730.43 |
+| 1957 Corvette Convertible            |       27 |      1013 | 130749.31 |
+| 1956 Porsche 356A Coupe              |       26 |      1013 | 129749.86 |
++--------------------------------------+----------+-----------+-----------+
+
+3. 業務訂單取消的比例 orders.sttaus = canceled
+
+DELIMITER $$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `cancelOrder`()
+    NO SQL
+BEGIN
+    DECLARE cancel int DEFAULT 0;
+
+	DECLARE allO INT DEFAULT 0;
+    DECLARE vexit int DEFAULT 0;
+    
+    DECLARE enumber INT DEFAULT 0;
+    
+    DECLARE curs CURSOR FOR
+    	SELECT employeenumber FROM employees;
+    DECLARE CONTINUE HANDLER FOR NOT FOUND SET vexit = 1;
+    OPEN curs;
+    
+    failOrder:LOOP
+    	FETCH curs into enumber;
+        if vexit = 1 THEN
+        	LEAVE failOrder;
+        end if;
+        select count(*) into cancel 
+        from orders o
+        join customers c on(c.customerNumber=o.customerNumber)
+        join employees e 
+        on(e.employeeNumber=c.salesRepEmployeeNumber)
+        where o.status='Cancelled' 
+        group by e.employeeNumber;
+
+        select count(*) into allO 
+        FROM orders o
+        join customers c on(c.customerNumber=o.customerNumber)
+        join employees e 
+        on(e.employeeNumber=c.salesRepEmployeeNumber)
+        group by e.employeeNumber;
+
+        SELECT enumber;
+        
+    end LOOP failOrder;
+    CLOSE curs;
+END$$
+DELIMITER ;
+
+
+4. 低於商品建議售價MSRP的訂單及其實際售價
+5. 當訂單資料被修改及刪除的時候記錄在 log 資料表中, 時間及所有資料欄位
